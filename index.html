@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Измерение скорости интернета</title>
+    <style>
+        button {
+            padding: 10px;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<button id="speedTestButton" onclick="runSpeedTest()">Скорость интернета</button>
+<div id="status"></div>
+<div id="result"></div>
+
+<script>
+    function runSpeedTest() {
+        var statusElement = document.getElementById('status');
+        var resultElement = document.getElementById('result');
+        var buttonElement = document.getElementById('speedTestButton');
+
+        statusElement.innerHTML = 'Идет замер...';
+        buttonElement.disabled = true;
+
+        var downloadSizeMB = 5; 
+        var downloadUrl = 'https://speed.hetzner.de/5MB.bin';
+
+        var numTests = 5;
+        var speeds = [];
+
+        function downloadFile() {
+            var startTime = new Date().getTime();
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', downloadUrl, true);
+            xhr.responseType = 'blob';
+
+            xhr.onload = function () {
+                var endTime = new Date().getTime();
+                var durationInSeconds = (endTime - startTime) / 1000;
+                var speedMbps = (downloadSizeMB / durationInSeconds).toFixed(2);
+                speeds.push(parseFloat(speedMbps));
+
+                if (speeds.length < numTests) {
+
+                    downloadFile();
+                } else {
+                    var pingResults = [];
+                    var pingCount = 5; 
+
+                    function ping() {
+                        var pingStartTime = new Date().getTime();
+                        var pingXhr = new XMLHttpRequest();
+
+                        pingXhr.open('HEAD', downloadUrl + '?ping=' + pingStartTime, true);
+                        pingXhr.onreadystatechange = function () {
+                            if (pingXhr.readyState === 4) {
+                                var pingEndTime = new Date().getTime();
+                                var pingDuration = pingEndTime - pingStartTime;
+                                pingResults.push(pingDuration);
+
+                                if (pingResults.length < pingCount) {
+                                    ping();
+                                } else {
+                                    var averagePing = (pingResults.reduce((a, b) => a + b, 0) / pingCount).toFixed(2);
+                                    var averageSpeed = (speeds.reduce((a, b) => a + b, 0) / numTests).toFixed(2);
+                                    displayResults(averageSpeed, averagePing);
+                                }
+                            }
+                        };
+
+                        pingXhr.send();
+                    }
+
+                    ping();
+                }
+            };
+
+            xhr.send();
+        }
+
+        downloadFile();
+    }
+
+    function displayResults(speed, ping) {
+        var statusElement = document.getElementById('status');
+        var resultElement = document.getElementById('result');
+        var buttonElement = document.getElementById('speedTestButton');
+
+        statusElement.innerHTML = 'Замер завершен';
+        resultElement.innerHTML = 'Скорость: ' + speed + ' Mbps<br>Пинг: ' + ping + ' ms';
+
+        var color = 'red';
+        if (speed >= 20 && ping <= 100) {
+            color = 'green';
+        } else if ((speed >= 10 && speed < 20) || ping > 100) {
+            color = 'yellow';
+        }
+
+        buttonElement.style.backgroundColor = color;
+        buttonElement.disabled = false;
+    }
+</script>
+
+</body>
+</html>
