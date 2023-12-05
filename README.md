@@ -1,0 +1,1 @@
+# checkSpeedPing.js
